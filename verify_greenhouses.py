@@ -23,11 +23,23 @@ warnings.filterwarnings("ignore", category=RuntimeWarning, message="Mean of empt
 warnings.filterwarnings("ignore", category=UserWarning, message="Column names longer than 10 characters")
 
 # === CONFIGURAÇÃO INICIAL ===
-poligonos_path = r"path/to/greenhouse_polygons.shp"   # registry polygons; field "Confirmado" = ground truth (1/0)
-raster_path = r"path/to/rgb_orthoimagery.tif"         # high-resolution RGB orthoimagery (e.g. DGT ortoSat2023)
-output_path = r"path/to/output/verified_greenhouses.shp"
-output_dir = os.path.dirname(output_path)
-results_dir = os.path.join(output_dir, "Resultados_confirma_estufas_RGB")
+
+poligonos_path = r"path/to/greenhouses.gdb"      # registry (GDB or shapefile); field "Confirmado" = ground truth (1/0)
+poligonos_layer = "greenhouse_polygons"
+
+raster_path = r"path/to/rgb_orthoimagery.tif"    # high-resolution RGB orthoimagery (e.g. DGT ortoSat2023)
+
+output_gdb = r"path/to/output.gdb"
+
+output_layer = "estufas_confirmadas"
+
+output_dir = r"path/to/output"
+
+results_dir = os.path.join(
+    output_dir,
+    "Resultados_confirma_estufas_SIA"
+)
+
 os.makedirs(results_dir, exist_ok=True)
 
 # Parâmetros ajustáveis
@@ -36,7 +48,7 @@ num_cv_folds = 5
 test_size = 0.25
 
 print("📁 A ler dados...")
-gdf = gpd.read_file(poligonos_path)
+gdf = gpd.read_file(poligonos_path, layer=poligonos_layer)
 raster = rasterio.open(raster_path)
 
 # Verificação de dados de entrada
@@ -50,14 +62,14 @@ if gdf.crs != raster.crs:
     print("A reprojetar shapefile para coincidir com o raster...")
     gdf = gdf.to_crs(raster.crs)
 
-# Verificar se existe o campo 'Confirmado'
-if 'Confirmado' not in gdf.columns:
-    print("⚠️ AVISO: O shapefile não contém o campo 'Confirmado'")
-    print("A adicionar coluna 'Confirmado' com valor padrão 1...")
-    gdf['Confirmado'] = 1
+# Verificar se existe o campo 'Conf_novo'
+if 'Conf_novo' not in gdf.columns:
+    print("⚠️ AVISO: O shapefile não contém o campo 'Conf_novo'")
+    print("A adicionar coluna 'Conf_novo' com valor padrão 1...")
+    gdf['Conf_novo'] = 1
 
 print(f"Total de polígonos no shapefile: {len(gdf)}")
-print(f"Polígonos confirmados: {gdf['Confirmado'].value_counts().to_dict()}")
+print(f"Polígonos confirmados: {gdf['Conf_novo'].value_counts().to_dict()}")
 
 def extrair_estatisticas_poligono_rgb(geom, src, buffer=0):
     """Extrai estatísticas RGB de um polígono a partir de um raster"""
@@ -206,7 +218,7 @@ for idx, row in gdf.iterrows():
     if stats is None:
         print(f"⚠️ Geometria inválida ou sem dados no índice {idx}, ignorando...")
         features_list.append({})
-        valores_confirmado.append(row.get('Confirmado', np.nan))
+        valores_confirmado.append(row.get('Conf_novo', np.nan))
         poligonos_validos.append(False)
         areas.append(area)
         perimetros.append(perimetro)
@@ -219,7 +231,7 @@ for idx, row in gdf.iterrows():
     stats['perimetro_area_ratio'] = perimetro / area if area > 0 else 0
     
     features_list.append(stats)
-    valores_confirmado.append(row.get('Confirmado', np.nan))
+    valores_confirmado.append(row.get('Conf_novo', np.nan))
     poligonos_validos.append(True)
     areas.append(area)
     perimetros.append(perimetro)
@@ -229,7 +241,7 @@ for idx, row in gdf.iterrows():
 
 # Converter para DataFrame
 df_features = pd.DataFrame(features_list)
-df_features['Confirmado'] = valores_confirmado
+df_features['Conf_novo'] = valores_confirmado
 
 # Remover linhas completamente vazias (polígonos inválidos)
 df_features = df_features[df_features.columns[df_features.notna().any()]]
@@ -237,11 +249,11 @@ df_features = df_features[df_features.columns[df_features.notna().any()]]
 # Adicionar flag de polígonos válidos ao geodataframe
 gdf['poligono_valido'] = poligonos_validos
 
-# Armazenar cópia inicial para uso posterior
-df_inicial = df_features.copy()
+# Guardar cópia com todas as linhas (para aplicar o modelo a todos os polígonos mais tarde)
+df_todas_linhas = df_features.copy()
 
-# Remover linhas com NaN ou Confirmado nulo
-df_features = df_features.dropna(subset=['Confirmado'])
+# Remover linhas com NaN ou Conf_novo nulo
+df_features = df_features.dropna(subset=['Conf_novo'])
 
 # Verificar % de valores NaN por coluna
 nan_percent = df_features.isna().mean() * 100
@@ -254,8 +266,11 @@ if colunas_para_remover:
     print(f"⚠️ A remover colunas com >50% NaNs: {', '.join(colunas_para_remover)}")
     df_features = df_features.drop(columns=colunas_para_remover)
 
+# Armazenar cópia com as mesmas colunas de treino, para aplicar o modelo a todos os polígonos
+df_inicial = df_todas_linhas.drop(columns=colunas_para_remover, errors='ignore')
+
 print(f"\n✅ Número de polígonos com dados para treino: {len(df_features)}")
-print(f"Distribuição da variável alvo: {df_features['Confirmado'].value_counts().to_dict()}")
+print(f"Distribuição da variável alvo: {df_features['Conf_novo'].value_counts().to_dict()}")
 
 # === ANÁLISE EXPLORATÓRIA ===
 print("\n📊 A realizar análise exploratória...")
@@ -263,7 +278,7 @@ print("\n📊 A realizar análise exploratória...")
 # Verificar tipos de dados antes da correlação
 print("\nVerificando tipos de dados das colunas...")
 for col in df_features.columns:
-    if col != 'Confirmado':
+    if col != 'Conf_novo':
         sample_value = df_features[col].iloc[0] if len(df_features) > 0 else None
         if sample_value is not None and not np.isscalar(sample_value):
             print(f"⚠️ Coluna '{col}' contém valores não-escalares: {type(sample_value)}")
@@ -272,7 +287,7 @@ for col in df_features.columns:
 
 # Gravar matriz de correlação
 plt.figure(figsize=(14, 12))
-corr_matrix = df_features.drop(columns=['Confirmado']).corr()
+corr_matrix = df_features.drop(columns=['Conf_novo']).corr()
 sns.heatmap(corr_matrix, annot=False, cmap='coolwarm')
 plt.title('Matriz de Correlação das Características RGB')
 plt.tight_layout()
@@ -280,8 +295,8 @@ plt.savefig(os.path.join(results_dir, 'correlacao_rgb.png'))
 plt.close()
 
 # Preparar dados para modelagem
-X_inicial = df_features.drop(columns='Confirmado')
-y = df_features['Confirmado']
+X_inicial = df_features.drop(columns='Conf_novo')
+y = df_features['Conf_novo']
 
 # Verificar e corrigir desequilíbrio de classes
 class_counts = y.value_counts()
@@ -462,7 +477,7 @@ plt.close()
 print("\n📦 A classificar todos os polígonos...")
 
 # Preparar dados originais para predição
-X_todos_inicial = df_inicial.drop(columns='Confirmado')
+X_todos_inicial = df_inicial.drop(columns='Conf_novo')
 
 # Aplicar o mesmo pré-processamento
 X_todos_prep = preprocessor.transform(X_todos_inicial)
@@ -474,8 +489,8 @@ X_todos_selected = selector.transform(X_todos_prep)
 todos_pred = np.full(len(gdf), np.nan)
 todos_prob = np.full(len(gdf), np.nan)
 
-# Identificar índices de polígonos válidos
-indices_validos = np.where(~np.isnan(X_todos_prep).all(axis=1))[0]
+# Identificar índices de polígonos válidos (com dados RGB extraídos com sucesso)
+indices_validos = np.where(np.array(poligonos_validos))[0]
 print(f"Polígonos com dados válidos para predição: {len(indices_validos)}/{len(gdf)}")
 
 # Fazer predição apenas para polígonos válidos
@@ -509,12 +524,16 @@ gdf['compact'] = 4 * np.pi * gdf.geometry.area / (gdf.geometry.length ** 2)
 
 # Gravar resultados
 print(f"\n✅ Gravando resultados...")
-gdf.to_file(output_path)
+gdf.to_file(
+    output_gdb,
+    layer=output_layer,
+    driver="OpenFileGDB"
+)
 
 # Gravar também como GeoJSON
-geojson_path = os.path.splitext(output_path)[0] + ".geojson"
+geojson_path = os.path.join(results_dir, output_layer + ".geojson")
 gdf.to_file(geojson_path, driver='GeoJSON')
-print(f"✅ Ficheiros guardados: {output_path} e {geojson_path}")
+print(f"✅ Ficheiros guardados: {output_gdb}\\{output_layer} e {geojson_path}")
 
 # Gravar relatório
 report_path = os.path.join(results_dir, "relatorio_modelo_rgb.txt")
