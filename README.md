@@ -18,19 +18,9 @@
 
 ## Why verify
 
-Since 2013, the teams involved in monitoring the Esposende – Vila do Conde
-Vulnerable Zone (*Zona Vulnerável*, ZV1) have been mapping greenhouse
-polygons in a dedicated GIS platform (SIA-ZV), based on interviews with
-farmers. But there was never a systematic updating effort — neither in the
-field nor at the desk — because it takes time and carries costs. A decade
-on, the registry and the territory had visibly diverged: structures
-demolished, replaced, extended or newly built.
+Since 2013, the teams monitoring the Esposende–Vila do Conde Vulnerable Zone (*Zona Vulnerável*, ZV1) have been mapping greenhouse polygons in a dedicated GIS platform (SIA-ZV), based on interviews with farmers. However, there has never been a systematic updating effort, either in the field or at the desk, because it is time-consuming and costly. A decade later, the registry and the territory had visibly diverged, with structures demolished, replaced, extended or newly built.
 
-An outdated registry undermines everything built on top of it — pressure
-mapping, compliance checks, the crossing with nitrate monitoring data. Yet
-re-surveying hundreds of polygons manually was exactly the cost the
-institution could not afford. The task called for an automated method to
-validate the existence of each registered greenhouse efficiently.
+An outdated registry undermines everything built on top of it: pressure mapping, compliance checks, and the cross-referencing of nitrate monitoring data. Yet re-surveying hundreds of polygons manually was precisely the cost the institution could not afford. The task called for an automated method to validate the existence of each registered greenhouse efficiently.
 
 ## The approach
 
