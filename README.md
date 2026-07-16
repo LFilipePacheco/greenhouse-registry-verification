@@ -7,6 +7,9 @@
 > the ground — with a confidence probability for every decision.
 
 ---
+![Classified registry polygons](docs/classified_polygons.png)
+*Registry polygons classified by the model over DGT ortoSat2023 imagery — greenhouse confirmed (1); no longer present (0).*
+
 ![Feature importance](docs/feature_importance.png)
 *Random Forest feature importance — blue-band ratios dominate, consistent with greenhouse plastic reflectance.*
 
