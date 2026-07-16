@@ -7,6 +7,11 @@
 > the ground — with a confidence probability for every decision.
 
 ---
+![Feature importance](docs/feature_importance.png)
+*Random Forest feature importance — blue-band ratios dominate, consistent with greenhouse plastic reflectance.*
+
+![Confusion matrix](docs/confusion_matrix.png)
+*Held-out test set: 36 of 37 polygons correctly classified.*
 
 ## Why verify
 
