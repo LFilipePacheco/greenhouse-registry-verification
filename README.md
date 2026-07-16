@@ -34,7 +34,7 @@ classifier to decide: *is there still a greenhouse here?* The pipeline —
 ### 1. Feature engineering (the heart of the method)
 
 Working with RGB only (no near-infrared band) demands creativity: the
-script extracts **~35 features per polygon**, designed to capture what makes
+script extracts **~40 features per polygon**, designed to capture what makes
 greenhouse plastic distinctive:
 
 - **Per-band statistics** — mean and robust percentiles (25th/75th) for R,
@@ -46,7 +46,10 @@ greenhouse plastic distinctive:
   Green minus Excess Red (ExGR), VARI, and normalised G–R, G–B, R–B
   indices: standard substitutes for NDVI when no NIR band is available;
 - **Global colour descriptors** — brightness, saturation, dominant
-  channel, inter-band ratios.
+  channel, inter-band ratios;
+- **Geometric descriptors** — area, perimeter, compactness (4πA/P²) and
+  perimeter/area ratio: greenhouses are elongated, regular structures,
+  and shape carries signal that spectra alone miss.
 
 ### 2. Preprocessing and class balance
 
@@ -66,10 +69,9 @@ the model comparison, reducing noise and overfitting risk.
 ### 4. Model comparison and tuning
 
 Random Forest and Gradient Boosting are tuned with **grid search over
-stratified 5-fold cross-validation** (an SVM baseline was evaluated in
-earlier iterations). The best performer is selected on held-out data
-(25% test split) and reported with accuracy, AUC-ROC and full
-classification metrics.
+stratified 5-fold cross-validation**. The best performer is selected on
+held-out data (25% test split) and reported with accuracy, AUC-ROC and
+full classification metrics.
 
 ### 5. Output
 
@@ -82,6 +84,26 @@ For every registered polygon, the model produces:
 
 The result is written back as a georeferenced layer, ready for the SIA-ZV
 updating workflow.
+
+## Results
+
+On a GIS-validated ground truth, the tuned **Random Forest** was selected
+over Gradient Boosting, using just **9 features** after automatic
+selection — dominated by blue-band relationships (`g_b_ratio`,
+`r_b_ratio`, `rb_index`, `std_B`), consistent with the strong blue
+reflectance of greenhouse plastic:
+
+| Metric | Value |
+|---|---|
+| Test accuracy | **97.3 %** |
+| Cross-validation accuracy | 94.5 % ± 3.5 % |
+| AUC-ROC | 0.977 |
+| Polygons assessed | 1,792 (1,786 with valid imagery) |
+
+Applied to the full registry, the model found that **only about 70 % of
+the greenhouses registered since 2013 are still active** — quantifying,
+for the first time, the registry's drift from reality and delivering a
+prioritised list for its update.
 
 ## Why it matters
 
