@@ -151,7 +151,7 @@ reference implementation.
 
 ---
 
-**Luís Filipe Pacheco** — Senior Agricultural Engineer & Data Scientist,
+**Luís Filipe Pacheco** — Senior Engineer & Data Scientist,
 CCDR-Norte, I.P. · [GitHub profile](https://github.com/LFilipePacheco) ·
 [LinkedIn](https://www.linkedin.com/in/lu%C3%ADs-filipe-pacheco-471495b/) ·
 [ORCID](https://orcid.org/0009-0001-7676-6542)
