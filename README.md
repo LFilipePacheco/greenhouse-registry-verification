@@ -1,3 +1,5 @@
+**English** · [Português](README.pt.md)
+
 # Verifying a greenhouse registry with machine learning
 ### Automated validation of GIS-registered greenhouses against current imagery · Esposende–Vila do Conde Vulnerable Zone, Portugal
 
